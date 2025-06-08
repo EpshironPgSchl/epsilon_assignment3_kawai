@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PostController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * 投稿の一覧を表示する
      */
@@ -22,16 +24,16 @@ class PostController extends Controller
         ]);
     }
 
-    /**
-     * 新規投稿フォームを表示する
-     */
-    public function create()
-    {
-        // 'posts.create'ビューを表示
-        return Inertia::render('Posts/Create', [
-            'canCreate' => auth()->check(), // ログインしているかどうかをチェック
-        ]);
-    }
+    // /**
+    //  * 新規投稿フォームを表示する
+    //  */
+    // public function create()
+    // {
+    //     // 'posts.create'ビューを表示
+    //     return Inertia::render('Posts/Create', [
+    //         'canCreate' => auth()->check(), // ログインしているかどうかをチェック
+    //     ]);
+    // }
 
     /**
      * 新規投稿をデータベースに保存する
@@ -40,12 +42,16 @@ class PostController extends Controller
     {
         //バリデーション
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'required|string|max:50',
             'content' => 'required|string|max:2000',
+        ], [
+            'title.max' => 'タイトルは50文字以内で入力してください。',
+            'title.required' => 'タイトルは必須です。',
+            'content.required' => '本文は必須です。',
+            'content.max' => '本文は2000文字以内で入力してください。',
         ]);
 
         // ログインしているユーザーのIDをマージして、投稿を作成
-        // ※ 実際には認証ミドルウェア(auth)をルートに設定する必要があります
         $post = Post::create([
             'user_id' => auth()->id(), // ログインユーザーのID
             'title' => $validated['title'],
@@ -72,11 +78,13 @@ class PostController extends Controller
      */
     public function edit(Post $post)
     {
-        // ※ 本人以外が編集できないようにする認可処理を入れるのが望ましい
-        // $this->authorize('update', $post); 
+        // 本人以外が編集できないようにする認可処理を入れるのが望ましい
+        $this->authorize('update', $post); 
 
         // 'posts.edit' ビューに編集対象の投稿データを渡して表示
-        return view('posts.edit', compact('post'));
+        return Inertia::render('Posts/Edit', [
+            'post' => $post,
+        ]);
     }
 
     /**
@@ -84,20 +92,25 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
-         // ※ 認可処理
-        // $this->authorize('update', $post);
+        //認可処理
+        $this->authorize('update', $post);
 
-        // バリデーション
-        // $validated = $request->validate([
-        //     'title' => 'required|string|max:255',
-        //     'content' => 'required|string|max:2000',
-        // ]);
+        //バリデーション
+        $validated = $request->validate([
+            'title' => 'required|string|max:50',
+            'content' => 'required|string|max:2000',
+        ], [
+            'title.max' => 'タイトルは50文字以内で入力してください。',
+            'title.required' => 'タイトルは必須です。',
+            'content.required' => '本文は必須です。',
+            'content.max' => '本文は2000文字以内で入力してください。',
+        ]);
 
-        // // 投稿を更新
-        // $post->update($validated);
+        // 投稿を更新
+        $post->update($validated);
 
-        // // 投稿詳細ページにリダイレクトし、成功メッセージを表示
-        // return redirect()->route('posts.show', $post)->with('success', '投稿を更新しました。');
+        // 投稿詳細ページにリダイレクトし、成功メッセージを表示
+        return redirect()->route('posts.index', $post)->with('success', '投稿を更新しました。');
     }
 
     /**
@@ -105,13 +118,13 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        // ※ 認可処理
-        // $this->authorize('delete', $post);
+        //認可処理
+        $this->authorize('delete', $post);
 
-        // // 投稿を論理削除
-        // $post->delete();
+        // 投稿を論理削除
+        $post->delete();
 
-        // // 投稿一覧ページにリダイレクトし、成功メッセージを表示
-        // return redirect()->route('posts.index')->with('success', '投稿を削除しました。');
+        // 投稿一覧ページにリダイレクトし、成功メッセージを表示
+        return redirect()->route('posts.index')->with('success', '投稿を削除しました。');
     }
 }
