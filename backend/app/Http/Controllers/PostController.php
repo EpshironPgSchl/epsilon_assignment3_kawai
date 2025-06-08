@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PostController extends Controller
 {
@@ -15,8 +16,10 @@ class PostController extends Controller
         //投稿を新しい順に10件ずつページネーションで取得
         $posts = Post::with('user')->latest()->paginate(10);
 
-        //'posts.index'ビューに投稿データを渡して表示
-        return view('posts.index', compact('posts'));
+        // inertiaを使用して、'posts.index'ビューに投稿データを渡して表示
+        return Inertia::render('Posts/Index', [
+            'posts' => $posts,
+        ]);
     }
 
     /**
@@ -25,7 +28,9 @@ class PostController extends Controller
     public function create()
     {
         // 'posts.create'ビューを表示
-        return view('posts.create');
+        return Inertia::render('Posts/Create', [
+            'canCreate' => auth()->check(), // ログインしているかどうかをチェック
+        ]);
     }
 
     /**
@@ -39,16 +44,16 @@ class PostController extends Controller
             'content' => 'required|string|max:2000',
         ]);
 
-        // // ログインしているユーザーのIDをマージして、投稿を作成
-        // // ※ 実際には認証ミドルウェア(auth)をルートに設定する必要があります
-        // $post = Post::create([
-        //     'user_id' => auth()->id(), // ログインユーザーのID
-        //     'title' => $validated['title'],
-        //     'content' => $validated['content'],
-        // ]);
+        // ログインしているユーザーのIDをマージして、投稿を作成
+        // ※ 実際には認証ミドルウェア(auth)をルートに設定する必要があります
+        $post = Post::create([
+            'user_id' => auth()->id(), // ログインユーザーのID
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+        ]);
 
-        // // 投稿一覧ページにリダイレクトし、成功メッセージを表示
-        // return redirect()->route('posts.index')->with('success', '投稿しました。');
+        // 投稿一覧ページにリダイレクトし、成功メッセージを表示
+        return redirect()->route('posts.index')->with('success', '投稿しました。');
     }
 
     /**
